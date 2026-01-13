@@ -1,101 +1,164 @@
 # Smart Reconciliation Visualizer
 
-Interactive dashboard to reconcile two financial datasets (e.g., purchase vs sales register). Upload/paste two datasets, configure matching, then explore:
+Interactive dashboard for reconciling two financial datasets (e.g., purchase vs sales registers) with explainable differences and audit-friendly exports.
 
+Upload or paste two datasets, configure matching rules, then explore:
 - Which records match
 - Which records mismatch (and why)
 - Which records are missing from either dataset
-- Search/filter through results and drill into raw rows
+- Search, filter, and drill down into raw rows
+
+---
 
 ## Quickstart
 
 ### Prerequisites
-
 - Node.js 18+ (recommended)
 
 ### Install & run
-
 ```bash
 npm install
 npm run dev
-```
-
 Open http://localhost:3000
 
-### Production build
-
-```bash
+Production build
+bash
+Copy code
 npm run build
 npm run start
-```
+How to use
+Load data into Dataset A and Dataset B (upload a .csv / .json file, or paste text).
 
-## How to use
+Select Key columns (used to pair rows across A and B).
 
-1. Load data into **Dataset A** and **Dataset B** (upload a `.csv` / `.json` file, or paste text).
-2. Pick **Key columns** (used to pair rows across A and B).
-3. Pick **Compare columns** (fields to check for equality).
-4. Use tabs (**Overview / Mismatches / Missing / Matches / Invalid**) and the search box to explore.
+Select Compare columns (fields checked for equality).
 
-### Supported input formats
+Use tabs (Overview / Mismatches / Missing / Matches / Invalid) and the global search box to explore results.
 
-- **CSV** with headers
-- **JSON** array of objects, e.g. `[{"id":"1","amount":100}, ...]`
-- **JSON** 2D array (first row headers)
+Export results for offline analysis if needed.
 
-## Matching logic (approach)
+Export options
+The dashboard provides two CSV export formats:
 
+1) Summary export
+Exports one row per reconciled record with its overall status.
+
+2) Expanded mismatch export (audit-friendly)
+Exports one row per differing field, including:
+
+Record key
+
+Field name
+
+Mismatch reason
+
+Value in Dataset A
+
+Value in Dataset B
+
+Source row indices
+
+This format is ideal for Excel pivoting, filtering by field or reason, and audit/compliance workflows.
+
+Supported input formats
+CSV with headers
+
+JSON array of objects
+Example: [{"id":"1","amount":100}, ...]
+
+JSON 2D array (first row treated as headers)
+
+Reconciliation logic (approach)
 This implementation is intentionally transparent and configurable.
 
-### 1) Pairing rows (finding “matches”)
+1) Pairing rows (finding matches)
+Build a composite key from the selected Key columns:
 
-- Build a composite key from the selected **Key columns**:
-	- Each key part is normalized (trim; optional case-insensitive)
-	- Key = `col1|col2|...`
-- Index each dataset as `key -> [rowIndex1, rowIndex2, ...]`
-- For each key:
-	- Pair rows in input order (first A with first B, etc.)
-	- Extra rows become **Missing** on the other side
+Each key part is normalized (trimmed; optional case-insensitive)
 
-### 2) Explaining mismatches (“and why”)
+Composite key format: col1|col2|...
 
-For each paired row, compare the selected **Compare columns**:
+Index each dataset as key -> [rowIndex1, rowIndex2, ...]
 
-- If both sides look numeric, compare using **Numeric tolerance** (e.g., tolerance 1 allows 100 vs 99.2 to still match)
-- Otherwise compare as normalized strings (optional case-insensitive)
+For each key:
 
-If any fields differ, the pair is classified as a **Mismatch** with a per-field diff list.
+Pair rows deterministically in input order (first A with first B, etc.)
 
-### 3) Invalid and duplicate handling
+Extra rows are marked as Missing on the opposite side
 
-- **Invalid rows**: rows missing one or more key values
-- **Duplicate keys**: when a key occurs multiple times in a dataset (reported; pairing still proceeds in input order)
+2) Explaining mismatches (the “why”)
+For each paired row, compare the selected Compare columns:
 
-## UX decisions
+If both values are numeric, compare using Numeric tolerance
 
-- “Load sample” buttons make the demo usable immediately.
-- Tabbed results + global search provide fast exploration.
-- “View rows” drill-down shows raw A/B row JSON for auditability.
+Example: tolerance 1 allows 100 vs 99.2 to still match
 
-## Assumptions
+Otherwise, compare normalized strings (optional case-insensitive)
 
-- The user can identify which columns form a stable key (invoice id, transaction id, etc.).
-- Date normalization can vary by source; this version treats dates as strings unless the user normalizes upstream.
-- Currency/amount strings are compared numerically where possible; other formats are compared as strings.
+If any fields differ, the pair is classified as a Mismatch with a per-field diff list.
 
-## Tech choices
+3) Invalid and duplicate handling
+Invalid rows: rows missing one or more key values
 
-- Next.js App Router (client-side dashboard)
-- TypeScript + strict mode
-- Tailwind CSS v4
-- PapaParse for robust CSV ingestion
+Duplicate keys: keys appearing multiple times in a dataset
 
-## Deployment (Vercel)
+Reported explicitly
 
-1. Push this repo to GitHub.
-2. Import it into Vercel.
-3. Build command: `npm run build`
-4. Output: Next.js default
+Pairing still proceeds in input order
 
-## Live demo URL
+UX decisions
+Load sample buttons make the demo usable immediately.
 
+Tabbed results + global search enable fast exploration.
+
+Drill-down views expose raw A/B row JSON for auditability.
+
+Clear visual status indicators highlight matches, mismatches, and missing records.
+
+Architecture decisions
+The solution is implemented as a client-side application.
+
+Rationale:
+
+The problem focuses on reconciliation logic and visualization
+
+Immediate feedback improves usability
+
+No persistence, authentication, or multi-user requirements were specified
+
+The reconciliation logic is modular and can be moved to a backend service if scalability or persistence is required in the future.
+
+Assumptions
+The user can identify which columns form a stable key (invoice ID, transaction ID, etc.).
+
+Date formats may vary by source; dates are treated as strings unless normalized upstream.
+
+Currency/amount values are compared numerically where possible; other formats fall back to string comparison.
+
+Tech choices
+Next.js (App Router, client-side dashboard)
+
+TypeScript with strict mode
+
+Tailwind CSS v4
+
+PapaParse for robust CSV ingestion
+
+Quality checks
+TypeScript strict mode enabled
+
+Linting and production build verified (npm run lint, npm run build)
+
+Tested with CSV and JSON inputs, including mismatches, missing rows, and duplicate keys
+
+Deployment (Vercel)
+Push this repository to GitHub
+
+Import it into Vercel
+
+Build command: npm run build
+
+Output: Next.js default
+
+Live demo
 https://smart-reconciliation-visualizer-six.vercel.app/
